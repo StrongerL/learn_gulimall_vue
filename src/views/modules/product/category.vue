@@ -1,5 +1,8 @@
 <template>
   <div>
+    <el-switch v-model="draggable" active-color="#13ce66" inactive-color="#ff4949"></el-switch>
+    <el-button v-if="draggable" @click="batchSave">批量保存</el-button>
+    <el-button type="danger" @click="batchDelete">批量删除</el-button>
     <el-tree
       :data="menus"
       :props="defaultProps"
@@ -7,9 +10,10 @@
       :default-expanded-keys="expandedKey"
       node-key="catId"
       show-checkbox
-      draggable
+      :draggable="draggable"
       :allow-drop="allowDrop"
       @node-drop="handleDrop"
+      ref="menuTree"
     >
       <span class="custom-tree-node" slot-scope="{ node, data }">
         <span>{{ node.label }}</span>
@@ -80,7 +84,9 @@ export default {
       dialogTitle: "",
       dialogType: "",
       maxLevel: 0,
-      updateNodes: []
+      updateNodes: [],
+      draggable: false,
+      pCids: []
     };
   },
   // 计算属性 类似于data概念
@@ -202,27 +208,40 @@ export default {
     getMaxLevel(node) {
       if (node.childNodes != null && node.childNodes.length != 0) {
         for (let i = 0; i < node.childNodes.length; i++) {
-          this.getMaxLevel(node.childNodes[i])
+          this.getMaxLevel(node.childNodes[i]);
         }
       } else {
         if (node.level > this.maxLevel) {
-          this.maxLevel = node.level
+          this.maxLevel = node.level;
         }
       }
     },
     allowDrop(draggingNode, dropNode, type) {
-      console.log("draggingNode", draggingNode, "dropNode", dropNode, "type", type)
-      this.getMaxLevel(draggingNode)
-      var draggingNode_depth = this.maxLevel - draggingNode.level + 1
-      var sum_depth = draggingNode_depth
+      console.log(
+        "draggingNode",
+        draggingNode,
+        "dropNode",
+        dropNode,
+        "type",
+        type
+      );
+      this.getMaxLevel(draggingNode);
+      var draggingNode_depth = this.maxLevel - draggingNode.level + 1;
+      var sum_depth = draggingNode_depth;
       if (type == "inner") {
-        sum_depth += dropNode.level
-      } else { // 'prev'或者 'next'
-        sum_depth += dropNode.level - 1
+        sum_depth += dropNode.level;
+      } else {
+        // 'prev'或者 'next'
+        sum_depth += dropNode.level - 1;
       }
-      this.maxLevel = 0
-      console.log("sum_depth", sum_depth, "draggingNode_depth", draggingNode_depth)
-      return sum_depth <= 3
+      this.maxLevel = 0;
+      console.log(
+        "sum_depth",
+        sum_depth,
+        "draggingNode_depth",
+        draggingNode_depth
+      );
+      return sum_depth <= 3;
     },
     /**
      * 共四个参数，依次为：
@@ -231,17 +250,98 @@ export default {
      * 被拖拽节点的放置位置（before、after、inner）、
      * event
      */
-    handleDrop(draggingNode, dropNode, dropType, ev){
-      console.log(draggingNode, dropNode, dropType, ev)
-      let pCid = 0
+    handleDrop(draggingNode, dropNode, dropType, ev) {
+      console.log(draggingNode, dropNode, dropType, ev);
+      // 父id
+      let pCid = 0;
+      let siblings = null;
       if (dropType == "inner") {
-        pCid = dropNode.data.catId
-      } else { // before、after
-        // pCid = dropNode.data.parentCid
+        pCid = dropNode.data.catId;
+        siblings = dropNode.childNodes;
+      } else {
+        // before、after
+        pCid = dropNode.data.parentCid;
+        siblings = dropNode.parent.childNodes;
       }
-      // todo
+      // 排序
+      for (let i = 0; i < siblings.length; i++) {
+        let catId = siblings[i].data.catId;
+        if (catId == draggingNode.data.catId) {
+          let catLevel = siblings[i].level;
+          if (catLevel != draggingNode.level) {
+            this.updateChildLevels(siblings[i]);
+          }
+          this.updateNodes.push({
+            catId: catId,
+            sort: i,
+            parentCid: pCid,
+            catLevel: catLevel
+          });
+        } else {
+          this.updateNodes.push({ catId: catId, sort: i });
+        }
+      }
 
+      this.pCids.push(pCid);
+      console.log("updateNodes", this.updateNodes);
+    },
+    updateChildLevels(node) {
+      for (let i = 0; i < node.childNodes.length; i++) {
+        this.updateNodes.push({
+          catId: node.childNodes[i].data.catId,
+          catLevel: node.childNodes[i].data.catLevel
+        });
+        if (node.childNodes[i].childNodes.length != 0) {
+          this.updateChildLevels(node.childNodes[i]);
+        }
+      }
+    },
+    batchSave() {
+      // 更新数据库数据
+      this.$http({
+        url: this.$http.adornUrl("/product/category/update/sort"),
+        method: "post",
+        data: this.$http.adornData(this.updateNodes, false)
+      }).then(({ data }) => {
+        this.getMenus();
+        this.expandedKey = this.pCids;
+        this.updateNodes = [];
+        this.pCids = [];
+      });
+    },
+    batchDelete() {
+      // 收集id
+      let deleteIds = [];
+      let checkedNodes = this.$refs.menuTree.getCheckedNodes();
+      for (let i = 0; i < checkedNodes.length; i++) {
+        deleteIds.push(checkedNodes[i].catId);
+      }
+      this.$confirm("是否删除?", "删除提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning"
+      })
+        .then(() => {
+          this.$http({
+            url: this.$http.adornUrl("/product/category/delete"),
+            method: "post",
+            data: this.$http.adornData(deleteIds, false)
+          }).then(({ data }) => {
+            this.$message({
+              type: "success",
+              message: "删除成功!"
+            });
+            this.getMenus();
+          });
+        })
+        .catch(() => {
+          this.$message({
+            type: "info",
+            message: "取消删除!"
+          });
+        });
 
+      console.log("checkedNodes", checkedNodes);
     }
   },
   // 生命周期 - 创建完成（可以访问当前this实例）
@@ -259,6 +359,8 @@ export default {
   activated() {} // 如果页面有keep-alive缓存功能，这个函数会触发
 };
 </script>
+
+
 
 <style scoped>
 </style>
