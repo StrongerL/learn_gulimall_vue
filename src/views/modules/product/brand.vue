@@ -30,7 +30,7 @@
       <el-table-column prop="brandId" header-align="center" align="center" label="品牌id"></el-table-column>
       <el-table-column prop="name" header-align="center" align="center" label="品牌名"></el-table-column>
       <el-table-column prop="logo" header-align="center" align="center" label="品牌logo地址">
-          <template slot-scope="scope">
+        <template slot-scope="scope">
           <!-- <el-image
               style="width: 100px; height: 80px"
               :src="scope.row.logo"
@@ -99,13 +99,18 @@ export default {
   },
   methods: {
     changeShowStatus(row) {
-      console.log("row", row)
-      var {brandId, showStatus} = row
+      console.log("row", row);
+      var { brandId, showStatus } = row;
       this.$http({
-        url: this.$http.adornUrl("/product/brand/update"),
+        url: this.$http.adornUrl("/product/brand/update/status"),
         method: "post",
-        data: this.$http.adornData({brandId, showStatus}, false)
-      }).then(({ data }) => {});
+        data: this.$http.adornData({ brandId, showStatus }, false)
+      }).then(({ data }) => {
+        this.$message({
+          type: "success",
+          message: "状态更新成功"
+        });
+      });
     },
     // 获取数据列表
     getDataList() {
