@@ -131,6 +131,8 @@ export default {
         }
         this.dataListLoading = false;
       });
+      // 获取数据列表之后重置catId
+      this.catId = 0
     },
     // 每页数
     sizeChangeHandle(val) {
