@@ -3,6 +3,7 @@
     :title="!dataForm.id ? '新增' : '修改'"
     :close-on-click-modal="false"
     :visible.sync="visible"
+    @closed="dialogClose"
   >
     <el-form
       :model="dataForm"
@@ -25,7 +26,7 @@
       </el-form-item>
       <el-form-item label="所属分类" prop="catelogId">
         <!-- <el-input v-model="dataForm.catelogId" placeholder="所属分类id"></el-input> -->
-        <el-cascader v-model="dataForm.catelogIds" :options="categories" :props="props"></el-cascader>
+        <el-cascader filterable placeholder="试试搜索：手机" v-model="catelogPath" :options="categories" :props="props"></el-cascader>
       </el-form-item>
     </el-form>
     <span slot="footer" class="dialog-footer">
@@ -45,6 +46,7 @@ export default {
         children: "children",
       },
       categories: [],
+      catelogPath: [],
       visible: false,
       dataForm: {
         attrGroupId: 0,
@@ -52,7 +54,6 @@ export default {
         sort: "",
         descript: "",
         icon: "",
-        catelogIds: [],
         catelogId: 0
       },
       dataRule: {
@@ -71,6 +72,9 @@ export default {
     };
   },
   methods: {
+    dialogClose(){
+      this.catelogPath = [];
+    },
     getCategories() {
       this.$http({
         url: this.$http.adornUrl("/product/category/list/tree"),
@@ -99,6 +103,8 @@ export default {
               this.dataForm.descript = data.attrGroup.descript;
               this.dataForm.icon = data.attrGroup.icon;
               this.dataForm.catelogId = data.attrGroup.catelogId;
+              // 父路径
+              this.catelogPath = data.attrGroup.catelogPath;
             }
           });
         }
@@ -121,8 +127,8 @@ export default {
               sort: this.dataForm.sort,
               descript: this.dataForm.descript,
               icon: this.dataForm.icon,
-              catelogId: this.dataForm.catelogIds[
-                this.dataForm.catelogIds.length - 1
+              catelogId: this.dataForm.catelogPath[
+                this.dataForm.catelogPath.length - 1
               ]
             })
           }).then(({ data }) => {
