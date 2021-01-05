@@ -34,7 +34,7 @@
         <el-input v-model="dataForm.firstLetter" placeholder="检索首字母"></el-input>
       </el-form-item>
       <el-form-item label="排序" prop="sort">
-        <el-input v-model="dataForm.sort" placeholder="排序"></el-input>
+        <el-input v-model.number="dataForm.sort" placeholder="排序"></el-input>
       </el-form-item>
     </el-form>
     <span slot="footer" class="dialog-footer">
@@ -94,7 +94,7 @@ export default {
             validator: (rule, value, callback) => {
               if (value == "") {
                 callback(new Error("排序字段必须填写"));
-              } else if (!/^[0-9]*$/.test(value)) {
+              } else if (!Number.isInteger(value) || value<0) {
                 callback(new Error("排序必须是一个大于等于0的整数"));
               } else {
                 callback();
