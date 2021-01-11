@@ -72,7 +72,7 @@ export default {
   },
   computed: {},
   methods: {
-    clearData(){
+    clearData() {
       this.dataResp.attrGroups = [];
       this.dataResp.baseAttrs = [];
       this.spuAttrsMap = {};
@@ -105,23 +105,27 @@ export default {
         //先对表单的baseAttrs进行初始化
         data.data.forEach(item => {
           let attrArray = [];
-          item.attrs.forEach(attr => {
-            let v = "";
-            if (_this.spuAttrsMap["" + attr.attrId]) {
-              v = _this.spuAttrsMap["" + attr.attrId].attrValue.split(";");
-              if (v.length == 1) {
-                v = v[0] + "";
+
+          if (item.attrs != null) {
+            item.attrs.forEach(attr => {
+              let v = "";
+              if (_this.spuAttrsMap["" + attr.attrId]) {
+                v = _this.spuAttrsMap["" + attr.attrId].attrValue.split(";");
+                if (v.length == 1 && attr.valueType == 0) {
+                  v = v[0] + "";
+                }
               }
-            }
-            attrArray.push({
-              attrId: attr.attrId,
-              attrName: attr.attrName,
-              attrValues: v,
-              showDesc: _this.spuAttrsMap["" + attr.attrId]
-                ? _this.spuAttrsMap["" + attr.attrId].quickShow
-                : attr.showDesc
+              attrArray.push({
+                attrId: attr.attrId,
+                attrName: attr.attrName,
+                attrValues: v,
+                showDesc: _this.spuAttrsMap["" + attr.attrId]
+                  ? _this.spuAttrsMap["" + attr.attrId].quickShow
+                  : attr.showDesc
+              });
             });
-          });
+          }
+
           this.dataResp.baseAttrs.push(attrArray);
         });
         this.dataResp.attrGroups = data.data;
@@ -168,10 +172,10 @@ export default {
             });
           });
         })
-        .catch((e) => {
+        .catch(e => {
           this.$message({
             type: "info",
-            message: "已取消修改"+e
+            message: "已取消修改" + e
           });
         });
     }
